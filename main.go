@@ -44,7 +44,10 @@ func main() {
 			}
 		case event := <-watcher.Event:
 			log.Println("event:", event)
-			
+			err = watcher.RemoveWatch("/etc/ssl/server.key")
+			if err != nil {
+				log.Fatal(err)
+			}
 			err = watcher.AddWatch("/etc/ssl/server.key", inotify.IN_MODIFY|inotify.IN_DELETE)
 			if err != nil {
 				log.Fatal(err)

@@ -8,21 +8,36 @@ import (
 	"golang.org/x/exp/inotify"
 )
 
+var watcher *inotify.Watcher
+
 func HelloServer(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, "hello, world!\n")
 }
 
-func main() {
-	watcher, err := inotify.NewWatcher()
+func newWatcher() error {
+	var err error
+	watcher, err = inotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	err = watcher.AddWatch("/etc/ssl/server.key", inotify.IN_IGNORED)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-	err = watcher.AddWatch("/etc/ssl/server.key", inotify.IN_MODIFY|inotify.IN_DELETE)
+func refreshWatcher() error {
+	var err error
+	err = watcher.Close()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	err = watcher.AddWatch("/etc/ssl/server.crt", inotify.IN_MODIFY|inotify.IN_DELETE)
+	return newWatcher()
+}
+
+func main() {
+	err := newWatcher()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -40,19 +55,14 @@ func main() {
 
 		case err := <-errChan:
 			if err != nil {
-				log.Fatal("ListenAndServe: ", err)
+				log.Println("ListenAndServe: ", err)
 			}
 		case event := <-watcher.Event:
-			log.Println("event:", event)
-			err = watcher.RemoveWatch("/etc/ssl/server.key")
+			log.Printf("event: %v", event)
+			err := refreshWatcher()
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
 			}
-			err = watcher.AddWatch("/etc/ssl/server.key", inotify.IN_MODIFY|inotify.IN_DELETE)
-			if err != nil {
-				log.Fatal(err)
-			}
-
 		case err := <-watcher.Error:
 			log.Println("error:", err)
 		}

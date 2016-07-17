@@ -1,0 +1,30 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ssltest
+  labels:
+    app: ssltest 
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: ssltest 
+    spec:
+      containers:
+      - name: ssltest
+        image: elsonrodriguez/ssltest:1.0 
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 443 
+        resources:
+          limits:
+            memory: "50Mi"
+            cpu: ".1"
+        volumeMounts:
+          - name: sslcerts 
+            mountPath: /etc/ssl
+      volumes:
+        - name: sslcerts 
+          secret:
+            secretName: sslcerts 
